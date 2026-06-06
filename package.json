@@ -1,0 +1,42 @@
+{
+  "name": "irminsul-v2",
+  "version": "1.0.0",
+  "description": "IRMINSUL V2 - Discord RPG persistant inspiré de Genshin Impact",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "deploy-commands": "tsx scripts/deploy-commands.ts",
+    "seed-database": "tsx scripts/seed-database.ts"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "genshin-impact",
+    "rpg"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.1.0",
+    "bullmq": "^4.0.0",
+    "dayjs": "^1.11.0",
+    "discord.js": "^14.14.0",
+    "dotenv": "^16.3.0",
+    "genshin-db": "latest",
+    "mathjs": "^12.0.0",
+    "mongodb": "3.6",
+    "mongoose": "^8.0.0",
+    "pino": "^8.17.0",
+    "redis": "^4.6.0",
+    "winston": "^3.11.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}
