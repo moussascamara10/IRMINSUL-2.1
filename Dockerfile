@@ -14,5 +14,5 @@ COPY . .
 # Compiler TypeScript
 RUN npm run build
 
-# Commande de démarrage
-CMD ["node", "dist/index.js"]
+# Commande de démarrage avec heap size augmenté
+CMD ["node", "--max-old-space-size=1024", "dist/index.js"]
