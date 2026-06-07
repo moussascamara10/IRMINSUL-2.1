@@ -15,5 +15,6 @@ export type { IWeaponOwned } from './WeaponOwned';
 export type { IArtifactOwned } from './ArtifactOwned';
 export type { IGuild } from './Guild';
 export type { IGachaHistory } from './GachaHistory';
+export type { IUserEventProgress } from './UserEventProgress';
 export type { IUserDailyProgress } from './UserDailyProgress';
 export type { IUserWeeklyProgress } from './UserWeeklyProgress';

@@ -1,6 +1,6 @@
 import mongoose, { Document } from 'mongoose';
 
-interface IUserEventProgress {
+export interface IUserEventProgress {
   userId: string;
   eventId: string;
   eventCurrency: number;

@@ -37,27 +37,6 @@ export interface WeeklyTask {
   category: 'normal' | 'hard' | 'extreme';
 }
 
-export interface UserDailyProgress {
-  userId: string;
-  date: Date;
-  completedTasks: string[];
-  totalPrimogensEarned: number;
-  totalMoraEarned: number;
-  streak: number;
-}
-
-export interface UserWeeklyProgress {
-  userId: string;
-  weekNumber: number;
-  year: number;
-  completedTasks: string[];
-  totalPrimogensEarned: number;
-  totalMoraEarned: number;
-  totalFatesEarned: number;
-  raidCompletions: number;
-  bossCompletions: number;
-}
-
 export class ActivityLoopService {
   private static readonly DAILY_TASKS: DailyTask[] = [
     {

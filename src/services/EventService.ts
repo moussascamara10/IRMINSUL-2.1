@@ -1,4 +1,4 @@
-import type { IUser } from '../database/models/index.js';
+import type { IUser, IUserEventProgress } from '../database/models/index.js';
 import { UserEventProgress } from '../database/models/UserEventProgress.js';
 import { economyService } from './EconomyService.js';
 
@@ -51,15 +51,6 @@ export interface EventMilestone {
     fates: number;
     exclusiveItems: string[];
   };
-}
-
-export interface UserEventProgress {
-  userId: string;
-  eventId: string;
-  eventCurrency: number;
-  completedActivities: string[];
-  claimedMilestones: number[];
-  lastActivityDate: Date;
 }
 
 export class EventService {
