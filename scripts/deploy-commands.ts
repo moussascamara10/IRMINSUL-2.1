@@ -24,9 +24,8 @@ for (const folder of moduleFolders) {
       console.log(`📄 Importation: ${filePath}`);
       
       try {
-        // Convertir le chemin Windows en URL file:// pour ESM
-        const fileUrl = `file:///${filePath.replace(/\\/g, '/')}`;
-        const { default: command } = await import(fileUrl);
+        // Import compatible avec Windows et Linux
+        const { default: command } = await import(filePath);
 
         if ('data' in command && 'execute' in command) {
           commands.push(command.data.toJSON());
