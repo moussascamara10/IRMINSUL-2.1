@@ -11,6 +11,9 @@
     "deploy-commands": "npx tsx scripts/deploy-commands.ts",
     "seed-database": "npx tsx scripts/seed-database.ts"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "keywords": [
     "discord",
     "bot",

@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: irminsul-v2
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: NODE_ENV
+        value: production
