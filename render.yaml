@@ -3,8 +3,8 @@ services:
     name: irminsul-v2
     env: node
     plan: free
-    buildCommand: npm install
-    startCommand: npm start
+    buildCommand: npm install --production=false
+    startCommand: node --import tsx/esm src/index.ts
     envVars:
       - key: DISCORD_TOKEN
         sync: false
@@ -14,3 +14,5 @@ services:
         sync: false
       - key: NODE_ENV
         value: production
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=256
