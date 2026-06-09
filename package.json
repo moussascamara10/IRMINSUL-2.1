@@ -7,13 +7,9 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "tsx src/index.ts",
+    "start": "node --import tsx/esm src/index.ts",
     "deploy-commands": "tsx scripts/deploy-commands.ts",
     "seed-database": "tsx scripts/seed-database.ts"
-  },
-  "railway": {
-    "buildCommand": "npm run build",
-    "startCommand": "tsx src/index.ts"
   },
   "keywords": [
     "discord",
