@@ -5,14 +5,14 @@ WORKDIR /app
 # Copier les fichiers de package
 COPY package*.json ./
 
-# Installer toutes les dépendances (incluant devDependencies pour le build)
+# Installer toutes les dépendances
 RUN npm ci
+
+# Installer tsx globalement
+RUN npm install -g tsx
 
 # Copier le code source
 COPY . .
 
-# Compiler TypeScript
-RUN npm run build
-
-# Commande de démarrage avec heap size augmenté
-CMD ["node", "--max-old-space-size=1024", "dist/index.js"]
+# Commande de démarrage avec tsx
+CMD ["tsx", "src/index.ts"]
