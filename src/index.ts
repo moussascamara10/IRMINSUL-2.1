@@ -13,6 +13,13 @@ process.on('unhandledRejection', (reason, promise) => {
 
 process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', error);
+  console.error('🚨 Arrêt forcé du processus suite à une exception non capturée.');
+  process.exit(1);
+});
+
+process.on('SIGTERM', () => {
+  console.log('📢 SIGTERM reçu - Arrêt gracieux en cours...');
+  process.exit(0);
 });
 
 async function main() {
