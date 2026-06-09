@@ -24,7 +24,7 @@ export async function loadEvents(client: IrminsulClient): Promise<void> {
       console.log(`📄 Importation de l'événement: ${filePath}`);
 
       try {
-        // Utiliser import() dynamique pour charger les fichiers JavaScript compilés
+        // Utiliser import() dynamique pour charger les fichiers TypeScript
         console.log(`🔗 Chemin: ${filePath}`);
         const fileUrl = pathToFileURL(filePath).href;
         const { default: event } = await import(fileUrl);

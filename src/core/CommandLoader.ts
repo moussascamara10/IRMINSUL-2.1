@@ -27,9 +27,9 @@ export async function loadCommands(client: IrminsulClient): Promise<void> {
       for (const file of commandFiles) {
         const filePath = join(commandsPath, file);
         console.log(`📄 Importation: ${filePath}`);
-        
+
         try {
-          // Utiliser import() dynamique pour charger les fichiers JavaScript compilés
+          // Utiliser import() dynamique pour charger les fichiers TypeScript
           const fileUrl = pathToFileURL(filePath).href;
           const { default: command } = await import(fileUrl);
 
