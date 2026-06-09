@@ -4,7 +4,7 @@ import { pathToFileURL } from 'url';
 import { IrminsulClient, Command } from './IrminsulClient.js';
 
 export async function loadCommands(client: IrminsulClient): Promise<void> {
-  const commandsPath = join(process.cwd(), 'dist', 'modules');
+  const commandsPath = join(process.cwd(), 'src', 'modules');
   const moduleFolders = readdirSync(commandsPath);
 
   let loadedCount = 0;
@@ -14,11 +14,11 @@ export async function loadCommands(client: IrminsulClient): Promise<void> {
   console.log(`📂 Modules trouvés: ${moduleFolders.length}`);
 
   for (const folder of moduleFolders) {
-    const commandsPath = join(process.cwd(), 'dist', 'modules', folder, 'commands');
+    const commandsPath = join(process.cwd(), 'src', 'modules', folder, 'commands');
 
     try {
       const commandFiles = readdirSync(commandsPath).filter((file) =>
-        file.endsWith('.js')
+        file.endsWith('.ts')
       );
 
       console.log(`📂 Dossier ${folder}/commands: ${commandFiles.length} fichiers`);

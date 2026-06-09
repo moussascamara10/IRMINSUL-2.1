@@ -11,6 +11,10 @@
     "deploy-commands": "tsx scripts/deploy-commands.ts",
     "seed-database": "tsx scripts/seed-database.ts"
   },
+  "railway": {
+    "buildCommand": "npm run build",
+    "startCommand": "tsx src/index.ts"
+  },
   "keywords": [
     "discord",
     "bot",

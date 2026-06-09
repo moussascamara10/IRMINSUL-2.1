@@ -4,7 +4,7 @@ import { pathToFileURL } from 'url';
 import { IrminsulClient } from './IrminsulClient.js';
 
 export async function loadEvents(client: IrminsulClient): Promise<void> {
-  const eventsPath = join(process.cwd(), 'dist', 'core', 'events');
+  const eventsPath = join(process.cwd(), 'src', 'core', 'events');
   console.log(`📂 Chemin des événements: ${eventsPath}`);
 
   let loadedCount = 0;
@@ -13,7 +13,7 @@ export async function loadEvents(client: IrminsulClient): Promise<void> {
 
   try {
     const eventFiles = readdirSync(eventsPath).filter((file) =>
-      file.endsWith('.js')
+      file.endsWith('.ts')
     );
 
     console.log(`📂 Fichiers d'événements trouvés: ${eventFiles.length}`);
