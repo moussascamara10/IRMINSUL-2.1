@@ -1,0 +1,8 @@
+[build]
+builder = "NIXPACKS"
+
+[build.env]
+NPM_FLAGS = "--production=false"
+
+[start]
+command = "npx tsx src/index.ts"
