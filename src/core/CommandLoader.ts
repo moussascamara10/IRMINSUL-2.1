@@ -1,7 +1,9 @@
 import { readdirSync } from 'fs';
 import { join } from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
+import { createRequire } from 'module';
 import { IrminsulClient, Command } from './IrminsulClient.js';
+
+const require = createRequire(import.meta.url);
 
 export async function loadCommands(client: IrminsulClient): Promise<void> {
   const commandsPath = join(process.cwd(), 'src', 'modules');
@@ -29,9 +31,9 @@ export async function loadCommands(client: IrminsulClient): Promise<void> {
         console.log(`📄 Importation: ${filePath}`);
         
         try {
-          // Convertir le chemin en URL file:// pour ESM (cross-platform)
-          const fileUrl = pathToFileURL(filePath).href;
-          const { default: command } = await import(fileUrl);
+          // Utiliser require() avec tsx pour charger les fichiers TypeScript
+          const commandModule = require(filePath);
+          const command = commandModule.default || commandModule;
 
           if ('data' in command && 'execute' in command) {
             client.commands.set(command.data.name, command);
