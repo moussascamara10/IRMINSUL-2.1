@@ -1,12 +1,10 @@
 import { readdirSync } from 'fs';
 import { join } from 'path';
-import { createRequire } from 'module';
+import { pathToFileURL } from 'url';
 import { IrminsulClient } from './IrminsulClient.js';
 
-const require = createRequire(import.meta.url);
-
 export async function loadEvents(client: IrminsulClient): Promise<void> {
-  const eventsPath = join(process.cwd(), 'src', 'core', 'events');
+  const eventsPath = join(process.cwd(), 'dist', 'core', 'events');
   console.log(`📂 Chemin des événements: ${eventsPath}`);
 
   let loadedCount = 0;
@@ -15,7 +13,7 @@ export async function loadEvents(client: IrminsulClient): Promise<void> {
 
   try {
     const eventFiles = readdirSync(eventsPath).filter((file) =>
-      file.endsWith('.ts') || file.endsWith('.js')
+      file.endsWith('.js')
     );
 
     console.log(`📂 Fichiers d'événements trouvés: ${eventFiles.length}`);
@@ -26,10 +24,10 @@ export async function loadEvents(client: IrminsulClient): Promise<void> {
       console.log(`📄 Importation de l'événement: ${filePath}`);
 
       try {
-        // Utiliser require() avec tsx pour charger les fichiers TypeScript
+        // Utiliser import() dynamique pour charger les fichiers JavaScript compilés
         console.log(`🔗 Chemin: ${filePath}`);
-        const eventModule = require(filePath);
-        const event = eventModule.default || eventModule;
+        const fileUrl = pathToFileURL(filePath).href;
+        const { default: event } = await import(fileUrl);
         console.log(`📦 Événement importé: ${event.name}`);
 
         if (event.once) {

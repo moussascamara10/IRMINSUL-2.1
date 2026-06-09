@@ -1,12 +1,10 @@
 import { readdirSync } from 'fs';
 import { join } from 'path';
-import { createRequire } from 'module';
+import { pathToFileURL } from 'url';
 import { IrminsulClient, Command } from './IrminsulClient.js';
 
-const require = createRequire(import.meta.url);
-
 export async function loadCommands(client: IrminsulClient): Promise<void> {
-  const commandsPath = join(process.cwd(), 'src', 'modules');
+  const commandsPath = join(process.cwd(), 'dist', 'modules');
   const moduleFolders = readdirSync(commandsPath);
 
   let loadedCount = 0;
@@ -16,11 +14,11 @@ export async function loadCommands(client: IrminsulClient): Promise<void> {
   console.log(`📂 Modules trouvés: ${moduleFolders.length}`);
 
   for (const folder of moduleFolders) {
-    const commandsPath = join(process.cwd(), 'src', 'modules', folder, 'commands');
-    
+    const commandsPath = join(process.cwd(), 'dist', 'modules', folder, 'commands');
+
     try {
-      const commandFiles = readdirSync(commandsPath).filter((file) => 
-        file.endsWith('.ts') || file.endsWith('.js')
+      const commandFiles = readdirSync(commandsPath).filter((file) =>
+        file.endsWith('.js')
       );
 
       console.log(`📂 Dossier ${folder}/commands: ${commandFiles.length} fichiers`);
@@ -31,9 +29,9 @@ export async function loadCommands(client: IrminsulClient): Promise<void> {
         console.log(`📄 Importation: ${filePath}`);
         
         try {
-          // Utiliser require() avec tsx pour charger les fichiers TypeScript
-          const commandModule = require(filePath);
-          const command = commandModule.default || commandModule;
+          // Utiliser import() dynamique pour charger les fichiers JavaScript compilés
+          const fileUrl = pathToFileURL(filePath).href;
+          const { default: command } = await import(fileUrl);
 
           if ('data' in command && 'execute' in command) {
             client.commands.set(command.data.name, command);
