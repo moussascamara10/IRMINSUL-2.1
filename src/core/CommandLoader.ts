@@ -1,5 +1,6 @@
 import { readdirSync } from 'fs';
 import { join } from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { IrminsulClient, Command } from './IrminsulClient.js';
 
 export async function loadCommands(client: IrminsulClient): Promise<void> {
@@ -28,8 +29,8 @@ export async function loadCommands(client: IrminsulClient): Promise<void> {
         console.log(`📄 Importation: ${filePath}`);
         
         try {
-          // Convertir le chemin Windows en URL file:// pour ESM
-          const fileUrl = `file:///${filePath.replace(/\\/g, '/')}`;
+          // Convertir le chemin en URL file:// pour ESM (cross-platform)
+          const fileUrl = pathToFileURL(filePath).href;
           const { default: command } = await import(fileUrl);
 
           if ('data' in command && 'execute' in command) {

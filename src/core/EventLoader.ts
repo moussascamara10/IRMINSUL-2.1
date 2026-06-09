@@ -1,5 +1,6 @@
 import { readdirSync } from 'fs';
 import { join } from 'path';
+import { pathToFileURL } from 'url';
 import { IrminsulClient } from './IrminsulClient.js';
 
 export async function loadEvents(client: IrminsulClient): Promise<void> {
@@ -23,8 +24,8 @@ export async function loadEvents(client: IrminsulClient): Promise<void> {
       console.log(`📄 Importation de l'événement: ${filePath}`);
 
       try {
-        // Convertir le chemin Windows en URL file:// pour ESM
-        const fileUrl = `file:///${filePath.replace(/\\/g, '/')}`;
+        // Convertir le chemin en URL file:// pour ESM (cross-platform)
+        const fileUrl = pathToFileURL(filePath).href;
         console.log(`🔗 URL: ${fileUrl}`);
         const { default: event } = await import(fileUrl);
         console.log(`📦 Événement importé: ${event.name}`);
