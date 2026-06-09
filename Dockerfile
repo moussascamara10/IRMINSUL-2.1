@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Installer toutes les dépendances
-RUN npm ci
+RUN npm install
 
 # Installer tsx globalement
 RUN npm install -g tsx
