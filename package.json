@@ -7,9 +7,9 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "npx tsx src/index.ts",
-    "deploy-commands": "npx tsx scripts/deploy-commands.ts",
-    "seed-database": "npx tsx scripts/seed-database.ts"
+    "start": "tsx src/index.ts",
+    "deploy-commands": "tsx scripts/deploy-commands.ts",
+    "seed-database": "tsx scripts/seed-database.ts"
   },
   "keywords": [
     "discord",
