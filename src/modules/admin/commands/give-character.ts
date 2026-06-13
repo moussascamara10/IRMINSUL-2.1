@@ -47,7 +47,7 @@ export default {
 
   async execute(interaction: ChatInputCommandInteraction) {
     // Vérification admin par ID utilisateur
-    const ADMIN_IDS = ['1153427632961110117'];
+    const ADMIN_IDS = ['1153427632961110117', '751421185715077181'];
     if (!ADMIN_IDS.includes(interaction.user.id)) {
       await interaction.reply({ content: '⛔ Vous n\'avez pas la permission d\'utiliser cette commande.', ephemeral: true });
       return;
