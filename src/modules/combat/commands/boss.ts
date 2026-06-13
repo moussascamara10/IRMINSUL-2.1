@@ -1,8 +1,10 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ComponentType } from 'discord.js';
 import { User, CharacterOwned } from '../../../database/models/index.js';
-import { combatEngine, BossStats, CombatCharacter } from '../../../services/CombatEngine.js';
+import { CombatEngine, IBossBase } from '../../../services/CombatEngine.js';
+import { ICombatCharacter } from '../../combat/types/combat.types.js';
 import { genshinDataService } from '../../../services/GenshinDataService.js';
 import { economyService } from '../../../services/EconomyService.js';
+import { RedisCooldown, COMMAND_COOLDOWNS } from '../../../utils/RedisCooldown.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -29,6 +31,20 @@ export default {
     const bossId = interaction.options.getString('boss')!;
     const discordId = interaction.user.id;
 
+    // Vérifier le cooldown
+    const cooldownCheck = await RedisCooldown.checkCooldown(discordId, 'boss_weekly', COMMAND_COOLDOWNS.boss_weekly);
+    
+    if (cooldownCheck.onCooldown) {
+      const remainingSeconds = cooldownCheck.remainingTime || 0;
+      await interaction.editReply({
+        content: `⏱️ Attendez ${remainingSeconds}s avant de combattre un boss.`
+      });
+      return;
+    }
+
+    // Définir le cooldown
+    await RedisCooldown.setCooldown(discordId, 'boss_weekly', COMMAND_COOLDOWNS.boss_weekly);
+
     try {
       const user = await User.findOne({ discordId });
 
@@ -48,7 +64,7 @@ export default {
       }
 
       // Vérifier la résine via EconomyService
-      if (!combatEngine.canAffordBoss(user)) {
+      if (!economyService.canAffordResin(user, 'boss')) {
         const currentResin = economyService.getCurrentResin(user);
         await interaction.editReply({
           content: `Vous n'avez pas assez de résine! Il vous en faut 20 mais vous n'en avez que ${currentResin}.`
@@ -78,20 +94,30 @@ export default {
       }
 
       // Calculer les stats de combat
-      const combatTeam: CombatCharacter[] = [];
+      const combatTeam: ICombatCharacter[] = [];
       let totalLevel = 0;
 
       for (const char of teamCharacters.slice(0, 4)) {
         const charData = genshinDataService.getCharacter(char.characterName);
         if (charData) {
-          const stats = combatEngine.calculateCharacterStats(char, charData, user);
-          combatTeam.push({
-            character: char,
-            characterData: charData,
-            stats,
-            currentHP: stats.hp,
-            energy: 0
-          });
+          const baseHp = charData.stats?.baseHP || 1000;
+          const combatChar: ICombatCharacter = {
+            characterId: char.characterId,
+            name: char.characterName,
+            element: charData.element,
+            level: char.level,
+            currentHp: Math.floor(baseHp * (1 + char.level * 0.1)),
+            maxHp: Math.floor(baseHp * (1 + char.level * 0.1)),
+            atk: Math.floor((charData.stats?.baseATK || 100) * (1 + char.level * 0.1)),
+            def: Math.floor((charData.stats?.baseDEF || 50) * (1 + char.level * 0.1)),
+            critRate: 5 + char.constellation,
+            critDmg: 50 + char.constellation * 5,
+            elementalMastery: 0,
+            energyRecharge: 1.0,
+            elementalBonus: {},
+            physicalBonus: 0
+          };
+          combatTeam.push(combatChar);
           totalLevel += char.level;
         }
       }
@@ -106,35 +132,36 @@ export default {
       const avgLevel = totalLevel / combatTeam.length;
 
       // Calculer les stats du boss avec progression utilisateur
-      const bossHP = combatEngine.calculateBossHP(bossId, user, avgLevel);
-      const bossATK = combatEngine.calculateBossAttack(bossId, user);
-      const bossDEF = combatEngine.calculateBossDefense(bossId, user);
-
-      const boss: BossStats = {
+      const bossBase: IBossBase = {
+        id: bossId,
         name: bossId.replace('_', ' ').toUpperCase(),
-        hp: bossHP,
-        maxHP: bossHP,
-        atk: bossATK,
-        def: bossDEF,
         element: getBossElement(bossId),
-        resistances: getBossResistances(bossId)
+        baseHp: 100000,
+        baseDamage: 2000,
+        level: Math.floor(avgLevel),
+        resistances: getBossResistances(bossId),
+        resinCost: 40
       };
 
+      const bossHP = Math.floor(bossBase.baseHp * (1 + user.worldLevel * 0.15));
+      const bossATK = Math.floor(bossBase.baseDamage * (1 + user.worldLevel * 0.1));
+      const bossDEF = Math.floor(500 * (1 + user.worldLevel * 0.1));
+
       // Déduire la résine via EconomyService
-      combatEngine.deductBossCost(user);
+      economyService.deductResinCost(user, 'boss');
 
       // Créer l'embed de combat
       const embed = new EmbedBuilder()
-        .setTitle(`⚔️ Combat: ${boss.name}`)
+        .setTitle(`⚔️ Combat: ${bossBase.name}`)
         .setColor(0xFF0000)
         .setDescription(`Niveau Monde: ${user.worldLevel} | Niveau équipe: ${Math.floor(avgLevel)}`)
         .addFields(
-          { name: '❤️ Boss HP', value: `${formatNumber(boss.hp)}/${formatNumber(boss.maxHP)}`, inline: true },
-          { name: '⚔️ Boss ATK', value: formatNumber(boss.atk), inline: true },
-          { name: '🛡️ Boss DEF', value: formatNumber(boss.def), inline: true }
+          { name: '❤️ Boss HP', value: `${formatNumber(bossHP)}/${formatNumber(bossHP)}`, inline: true },
+          { name: '⚔️ Boss ATK', value: formatNumber(bossATK), inline: true },
+          { name: '🛡️ Boss DEF', value: formatNumber(bossDEF), inline: true }
         )
         .addFields(
-          { name: '👥 Équipe', value: combatTeam.map(c => `${c.characterData.name} (Nv.${c.character.level})`).join('\n'), inline: false }
+          { name: '👥 Équipe', value: combatTeam.map(c => `${c.name} (Nv.${c.level})`).join('\n'), inline: false }
         )
         .setTimestamp();
 

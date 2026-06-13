@@ -1,0 +1,126 @@
+[
+  {
+    "id": "liyue_rain",
+    "name": "Pluies de Liyue",
+    "emoji": "🌦️",
+    "description": "Les pluies de Liyue enrichissent la terre et les coffres des marchands.",
+    "effects": {
+      "moraMultiplier": 1.15,
+      "expeditionSpeedup": 0.1
+    },
+    "rarity": "common",
+    "weight": 20
+  },
+  {
+    "id": "inazuma_storm",
+    "name": "Tempête d'Inazuma",
+    "emoji": "⚡",
+    "description": "La foudre d'Inazuma charge l'air. Les créatures Électro sont déchaînées.",
+    "effects": {
+      "elementBonus": {
+        "element": "Electro",
+        "multiplier": 1.2
+      },
+      "dropRateBonus": 0.1
+    },
+    "rarity": "common",
+    "weight": 18
+  },
+  {
+    "id": "mondstadt_bloom",
+    "name": "Floraison de Mondstadt",
+    "emoji": "🌸",
+    "description": "Les fleurs de Cécilia s'épanouissent. Les Archons sourient aux Voyageurs.",
+    "effects": {
+      "primoOnLogin": 5,
+      "commissionBonus": 1.25
+    },
+    "rarity": "common",
+    "weight": 18
+  },
+  {
+    "id": "sumeru_mist",
+    "name": "Brumes de Sumeru",
+    "emoji": "🌿",
+    "description": "Les brumes sacrées de Sumeru voilent le monde. Les plantes parlent...",
+    "effects": {
+      "elementBonus": {
+        "element": "Dendro",
+        "multiplier": 1.15
+      },
+      "resinCostReduction": 0.05
+    },
+    "rarity": "common",
+    "weight": 16
+  },
+  {
+    "id": "abyss_night",
+    "name": "Nuit de l'Abîme",
+    "emoji": "🌑",
+    "description": "Une obscurité profonde enveloppe Teyvat. Les boss sont plus puissants, mais plus généreux.",
+    "effects": {
+      "dropRateBonus": 0.5,
+      "moraMultiplier": 0.8
+    },
+    "rarity": "rare",
+    "weight": 8
+  },
+  {
+    "id": "archon_blessing",
+    "name": "Bénédiction des Archons",
+    "emoji": "✨",
+    "description": "Les Sept Archons regardent ce serveur avec bienveillance aujourd'hui.",
+    "effects": {
+      "softPityReduction": 5,
+      "primoOnLogin": 15,
+      "moraMultiplier": 1.3
+    },
+    "rarity": "rare",
+    "weight": 6
+  },
+  {
+    "id": "fontaine_tide",
+    "name": "Grande Marée de Fontaine",
+    "emoji": "🌊",
+    "description": "Les eaux de Fontaine montent. Les trésors cachés remontent à la surface.",
+    "effects": {
+      "moraMultiplier": 1.25,
+      "dropRateBonus": 0.2,
+      "elementBonus": {
+        "element": "Hydro",
+        "multiplier": 1.1
+      }
+    },
+    "rarity": "common",
+    "weight": 15
+  },
+  {
+    "id": "dragonspine_blizzard",
+    "name": "Blizzard du Dragonspine",
+    "emoji": "❄️",
+    "description": "La montagne gronde. Les expéditions dans les régions froides rapportent davantage.",
+    "effects": {
+      "elementBonus": {
+        "element": "Cryo",
+        "multiplier": 1.2
+      },
+      "expeditionSpeedup": 0.15
+    },
+    "rarity": "common",
+    "weight": 16
+  },
+  {
+    "id": "golden_hour",
+    "name": "Heure Dorée",
+    "emoji": "☀️",
+    "description": "ÉVÉNEMENT RARE — Le soleil de Teyvat brille d'une lumière extraordinaire. Tout est amplifié.",
+    "effects": {
+      "moraMultiplier": 1.5,
+      "primoOnLogin": 30,
+      "dropRateBonus": 0.3,
+      "commissionBonus": 2.0
+    },
+    "rarity": "legendary",
+    "weight": 1
+  }
+]

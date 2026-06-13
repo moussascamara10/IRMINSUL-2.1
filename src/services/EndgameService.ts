@@ -1,5 +1,5 @@
 import type { IUser } from '../database/models/index.js';
-import { combatEngine } from './CombatEngine.js';
+import { CombatEngine } from './CombatEngine.js';
 import { economyService } from './EconomyService.js';
 
 export interface RaidConfig {

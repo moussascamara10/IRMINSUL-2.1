@@ -57,6 +57,10 @@ export interface IUser extends Document {
     character: boolean;
     weapon: boolean;
   };
+  
+  // Compassion Pity (série de pulls sans 5★)
+  dryStreak: number;
+  compassionBonus: number; // Bonus de taux de 5★ basé sur la série sèche
 
   // Flags
   tutorialCompleted: boolean;
@@ -115,6 +119,9 @@ const UserSchema = new Schema<IUser>({
     character: { type: Boolean, default: false },
     weapon: { type: Boolean, default: false }
   },
+  
+  dryStreak: { type: Number, default: 0, min: 0 },
+  compassionBonus: { type: Number, default: 0, min: 0, max: 0.5 },
 
   tutorialCompleted: { type: Boolean, default: false },
   isBanned: { type: Boolean, default: false },

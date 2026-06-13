@@ -1,20 +1,21 @@
 import { REST, Routes } from 'discord.js';
 import { readdirSync } from 'fs';
 import { join } from 'path';
+import { pathToFileURL } from 'url';
 import 'dotenv/config';
 
 const commands: any[] = [];
-const commandsPath = join(process.cwd(), 'dist', 'modules');
+const commandsPath = join(process.cwd(), 'src', 'modules');
 const moduleFolders = readdirSync(commandsPath);
 
 console.log('📂 Modules trouvés:', moduleFolders);
 
 for (const folder of moduleFolders) {
-  const folderCommandsPath = join(process.cwd(), 'dist', 'modules', folder, 'commands');
-  
+  const folderCommandsPath = join(process.cwd(), 'src', 'modules', folder, 'commands');
+
   try {
-    const commandFiles = readdirSync(folderCommandsPath).filter((file) => 
-      file.endsWith('.js')
+    const commandFiles = readdirSync(folderCommandsPath).filter((file) =>
+      file.endsWith('.ts')
     );
 
     console.log(`📂 Dossier ${folder}/commands: ${commandFiles.length} fichiers`);
@@ -25,7 +26,8 @@ for (const folder of moduleFolders) {
       
       try {
         // Import compatible avec Windows et Linux
-        const { default: command } = await import(filePath);
+        const fileUrl = pathToFileURL(filePath).href;
+        const { default: command } = await import(fileUrl);
 
         if ('data' in command && 'execute' in command) {
           commands.push(command.data.toJSON());
@@ -50,24 +52,14 @@ const rest = new REST().setToken(process.env.DISCORD_TOKEN!);
   try {
     console.log(`📤 Déploiement de ${commands.length} commandes d'application...`);
 
-    const guildId = process.env.GUILD_ID;
     const clientId = process.env.CLIENT_ID;
 
-    if (guildId) {
-      // Déploiement sur un serveur spécifique (pour le développement)
-      await rest.put(
-        Routes.applicationGuildCommands(clientId!, guildId),
-        { body: commands }
-      );
-      console.log(`✅ Commandes déployées sur le serveur ${guildId}`);
-    } else {
-      // Déploiement global
-      await rest.put(
-        Routes.applicationCommands(clientId!),
-        { body: commands }
-      );
-      console.log('✅ Commandes déployées globalement');
-    }
+    // Déploiement global (production)
+    await rest.put(
+      Routes.applicationCommands(clientId!),
+      { body: commands }
+    );
+    console.log('✅ Commandes déployées globalement');
   } catch (error) {
     console.error('❌ Erreur lors du déploiement des commandes:', error);
     process.exit(1);

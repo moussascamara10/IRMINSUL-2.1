@@ -1,59 +1,64 @@
 import { readdirSync } from 'fs';
-import { join } from 'path';
-import { pathToFileURL } from 'url';
+import { join, dirname, extname } from 'path';
+import { pathToFileURL, fileURLToPath } from 'url';
 import { IrminsulClient } from './IrminsulClient.js';
 
 export async function loadEvents(client: IrminsulClient): Promise<void> {
-  const eventsPath = join(process.cwd(), 'src', 'core', 'events');
-  console.log(`📂 Chemin des événements: ${eventsPath}`);
+  // AUTO-DÉTECTION : même mécanique que CommandLoader
+  const currentFile = fileURLToPath(import.meta.url);
+  const coreDir    = dirname(currentFile);
+  const fileExt    = extname(currentFile);           // .ts ou .js
+  const eventsPath = join(coreDir, 'events');        // core/events/ = toujours relatif à core/
 
-  let loadedCount = 0;
-  let errorCount = 0;
-  let totalFiles = 0;
+  console.log(`📂 Chargement événements depuis: ${eventsPath} (ext: ${fileExt})`);
 
+  let eventFiles: string[];
   try {
-    const eventFiles = readdirSync(eventsPath).filter((file) =>
-      file.endsWith('.ts')
+    eventFiles = readdirSync(eventsPath).filter(f =>
+      f.endsWith(fileExt) && !f.includes('.d.')
     );
-
-    console.log(`📂 Fichiers d'événements trouvés: ${eventFiles.length}`);
-    totalFiles = eventFiles.length;
-
-    for (const file of eventFiles) {
-      const filePath = join(eventsPath, file);
-      console.log(`📄 Importation de l'événement: ${filePath}`);
-
-      try {
-        // Utiliser import() dynamique pour charger les fichiers TypeScript
-        console.log(`🔗 Chemin: ${filePath}`);
-        const fileUrl = pathToFileURL(filePath).href;
-        const { default: event } = await import(fileUrl);
-        console.log(`📦 Événement importé: ${event.name}`);
-
-        if (event.once) {
-          client.once(event.name, (...args) => event.execute(...args));
-          console.log(`✅ Événement (once) chargé: ${event.name}`);
-          loadedCount++;
-        } else {
-          client.on(event.name, (...args) => event.execute(...args));
-          console.log(`✅ Événement chargé: ${event.name}`);
-          loadedCount++;
-        }
-      } catch (error) {
-        console.error(`❌ Erreur lors de l'importation de ${file}:`, error);
-        errorCount++;
-      }
-    }
-  } catch (error) {
-    console.error('❌ Erreur lors du chargement des événements:', error);
-  }
-
-  // Guard: crash si aucun événement n'est chargé
-  if (loadedCount === 0) {
-    console.error(`🚨 CRITIQUE: 0 événements chargés sur ${totalFiles} tentés (${errorCount} erreurs)`);
-    console.error(`🚨 Le bot ne peut pas fonctionner sans event handlers. Arrêt forcé.`);
+  } catch {
+    console.error(`� Dossier events introuvable: ${eventsPath}`);
     process.exit(1);
   }
 
-  console.log(`✅ ${loadedCount} événements chargés (${errorCount} erreurs ignorées)`);
+  let loadedCount = 0;
+  let errorCount  = 0;
+
+  for (const file of eventFiles) {
+    const filePath = join(eventsPath, file);
+    try {
+      const fileUrl = pathToFileURL(filePath).href;
+      const mod     = await import(fileUrl);
+      const event   = mod.default ?? mod;
+
+      if (!event?.name || typeof event.execute !== 'function') {
+        console.warn(`⚠️ Événement invalide (name ou execute manquant): ${file}`);
+        errorCount++;
+        continue;
+      }
+
+      if (event.once) {
+        client.once(event.name, (...args: unknown[]) => event.execute(...args));
+      } else {
+        client.on(event.name, (...args: unknown[]) => event.execute(...args));
+      }
+
+      console.log(`✅ Événement enregistré: ${event.name}`);
+      loadedCount++;
+
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.error(`❌ Erreur lors de l'importation de ${file}: ${errMsg}`);
+      errorCount++;
+    }
+  }
+
+  if (loadedCount === 0) {
+    console.error(`🚨 CRITIQUE: 0 événements chargés (${errorCount} erreurs)`);
+    console.error(`🚨 Sans interactionCreate, aucune commande Discord ne peut répondre.`);
+    process.exit(1);
+  }
+
+  console.log(`✅ Événements chargés: ${loadedCount}/${eventFiles.length} (${errorCount} erreurs)`);
 }

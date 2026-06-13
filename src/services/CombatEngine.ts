@@ -1,215 +1,185 @@
-import type { ICharacterOwned, IUser } from '../database/models/index.js';
-import { CharacterData } from './GenshinDataService.js';
-import { progressionService } from './ProgressionService.js';
-import { economyService } from './EconomyService.js';
+import type { ICombatCharacter, IDamageResult, IReactionResult, IReactionConfig } from '../modules/combat/types/combat.types.js';
 
-export interface CombatStats {
-  hp: number;
-  atk: number;
-  def: number;
-  em: number;
-  critRate: number;
-  critDmg: number;
-  elementalBonus: number;
-}
-
-export interface CombatCharacter {
-  character: ICharacterOwned;
-  characterData: CharacterData;
-  stats: CombatStats;
-  currentHP: number;
-  energy: number;
-}
-
-export interface BossStats {
+export interface IBossBase {
+  id: string;
   name: string;
-  hp: number;
-  maxHP: number;
-  atk: number;
-  def: number;
   element: string;
-  resistances: { [element: string]: number };
+  baseHp: number;
+  baseDamage: number;
+  level?: number;
+  resistances: Record<string, number>;
+  attacks?: any[];
+  phases?: any[];
+  skillCooldown?: number;
+  resinCost?: number;
+  spriteUrl?: string;
+  bannerImageUrl?: string;
+  lore?: string;
+  arXPReward?: number;
+  baseMora?: number;
+  dropTable?: any[];
+  gemRewards?: string[];
 }
 
 export class CombatEngine {
-  calculateCharacterStats(character: ICharacterOwned, characterData: CharacterData, user: IUser): CombatStats {
-    // Stats de base du personnage depuis genshin-db (lecture seule)
-    const baseHP = characterData.stats.baseHP;
-    const baseATK = characterData.stats.baseATK;
-    const baseDEF = characterData.stats.baseDEF;
 
-    // Multiplicateur selon le niveau (progression réelle)
-    const levelMultiplier = 1 + (character.level * 0.1);
-    
-    // Bonus d'ascension (progression réelle)
-    const ascensionBonus = character.ascension * 0.1;
+  // ============================================================
+  // CALCUL PRINCIPAL DES DÉGÂTS
+  // ============================================================
 
-    // Bonus World Level (progression utilisateur)
-    const worldLevelBonus = user.worldLevel * 0.05;
+  static calculateDamage(
+    attacker: ICombatCharacter,
+    defender: IBossBase,
+    action: 'normal' | 'skill' | 'burst',
+    worldLevel: number
+  ): IDamageResult {
 
-    // Stats calculés avec progression
-    const stats: CombatStats = {
-      hp: Math.floor(baseHP * levelMultiplier * (1 + ascensionBonus + worldLevelBonus)),
-      atk: Math.floor(baseATK * levelMultiplier * (1 + ascensionBonus + worldLevelBonus)),
-      def: Math.floor(baseDEF * levelMultiplier * (1 + ascensionBonus + worldLevelBonus)),
-      em: 0, // À calculer avec les artefacts
-      critRate: 5 + (character.constellation * 1), // Bonus constellation
-      critDmg: 50 + (character.constellation * 5), // Bonus constellation
-      elementalBonus: 0 // À calculer avec les artefacts
-    };
+    // 1. ATK de base du multiplicateur selon l'action
+    const talentMultiplier = TALENT_MULTIPLIERS[action][attacker.level] || 1.0;
 
-    // TODO: Ajouter les stats des artefacts
-    // TODO: Ajouter les stats de l'arme
-    // TODO: Ajouter les bonus de talents
+    // 2. ATK total
+    const atkTotal = attacker.atk;
 
-    return stats;
-  }
+    // 3. Dégâts de base
+    let baseDmg = atkTotal * talentMultiplier;
 
-  calculateDamage(
-    attacker: CombatCharacter,
-    defender: BossStats,
-    skillMultiplier: number
-  ): { damage: number; isCrit: boolean; element: string } {
-    const stats = attacker.stats;
-    const isCrit = Math.random() < stats.critRate / 100;
-    
-    // Dégâts de base
-    let damage = stats.atk * skillMultiplier;
+    // 4. Bonus élémentaire
+    const elemBonus = attacker.elementalBonus[attacker.element] || 0;
+    const physBonus = action === 'normal' ? attacker.physicalBonus : 0;
+    baseDmg *= (1 + elemBonus + physBonus);
 
-    // Bonus élémentaire
-    damage *= (1 + stats.elementalBonus / 100);
+    // 5. Résistance ennemie
+    const resistance = defender.resistances[attacker.element] || 0.1;
+    const resMult = this.calculateResistanceMultiplier(resistance);
+    baseDmg *= resMult;
 
-    // Résistance élémentaire
-    const resistance = defender.resistances[characterDataToElement(attacker.characterData)] || 0;
-    const resistanceMultiplier = resistance >= 0 
-      ? (1 - resistance / 100) 
-      : (1 - resistance / 200);
-    damage *= resistanceMultiplier;
+    // 6. Défense ennemie
+    const defMult = this.calculateDefenseMultiplier(attacker.level, defender.level || worldLevel * 5 + 20);
+    baseDmg *= defMult;
 
-    // Défense
-    const defMultiplier = (attacker.character.level + 100) / (attacker.character.level + 100 + defender.def);
-    damage *= defMultiplier;
-
-    // Critique
+    // 7. Critique
+    const isCrit = Math.random() < attacker.critRate;
     if (isCrit) {
-      damage *= (1 + stats.critDmg / 100);
+      baseDmg *= attacker.critDmg;
     }
 
+    // 8. Arrondir
+    const finalDamage = Math.floor(baseDmg);
+
+    return { damage: finalDamage, isCrit, element: attacker.element };
+  }
+
+  private static calculateResistanceMultiplier(resistance: number): number {
+    if (resistance < 0) {
+      return 1 - resistance / 2;
+    } else if (resistance < 0.75) {
+      return 1 - resistance;
+    } else {
+      return 1 / (4 * resistance + 1);
+    }
+  }
+
+  private static calculateDefenseMultiplier(attackerLevel: number, defenderLevel: number): number {
+    return (attackerLevel + 100) / (attackerLevel + defenderLevel + 200);
+  }
+
+  // ============================================================
+  // RÉACTIONS ÉLÉMENTAIRES
+  // ============================================================
+
+  static applyElementalReaction(
+    attackerElement: string,
+    existingStatus: string | null,
+    attackerEM: number,
+    damage: number
+  ): IReactionResult {
+
+    if (!existingStatus) {
+      return { reactionName: null, bonusDamage: 0, newStatus: attackerElement };
+    }
+
+    const reaction = ELEMENTAL_REACTIONS[existingStatus as keyof typeof ELEMENTAL_REACTIONS]?.[attackerElement as keyof typeof ELEMENTAL_REACTIONS[keyof typeof ELEMENTAL_REACTIONS]];
+    if (!reaction) {
+      return { reactionName: null, bonusDamage: 0, newStatus: attackerElement };
+    }
+
+    const emBonus = this.calculateEMBonus(attackerEM, reaction.type);
+    const bonusDamage = Math.floor(reaction.baseMultiplier * (1 + emBonus) * damage);
+
     return {
-      damage: Math.floor(damage),
-      isCrit,
-      element: attacker.characterData.element
+      reactionName: reaction.name,
+      bonusDamage,
+      newStatus: reaction.persistStatus || null,
+      specialEffect: reaction.specialEffect
     };
   }
 
-  calculateBossHP(bossId: string, user: IUser, teamLevel: number): number {
-    // HP de base du boss
-    const baseHP = 100000;
-    
-    // Multiplicateur World Level (progression utilisateur)
-    const wlMultiplier = 1 + (user.worldLevel * 0.15);
-    
-    // Multiplicateur AR (progression utilisateur)
-    const arMultiplier = 1 + (user.adventureRank / 60 * 0.3);
-    
-    // Multiplicateur niveau équipe (progression personnages)
-    const teamMultiplier = 1 + (teamLevel / 90 * 0.5);
-    
-    return Math.floor(baseHP * wlMultiplier * arMultiplier * teamMultiplier);
-  }
-
-  calculateBossAttack(bossId: string, user: IUser): number {
-    const baseATK = 2000;
-    // Multiplicateur selon World Level et AR
-    const wlMultiplier = 1 + (user.worldLevel * 0.1);
-    const arMultiplier = 1 + (user.adventureRank / 60 * 0.2);
-    return Math.floor(baseATK * wlMultiplier * arMultiplier);
-  }
-
-  calculateBossDefense(bossId: string, user: IUser): number {
-    const baseDEF = 500;
-    // Multiplicateur selon World Level et AR
-    const wlMultiplier = 1 + (user.worldLevel * 0.1);
-    const arMultiplier = 1 + (user.adventureRank / 60 * 0.2);
-    return Math.floor(baseDEF * wlMultiplier * arMultiplier);
-  }
-
-  calculateReactionDamage(
-    element1: string,
-    element2: string,
-    em: number,
-    level: number
-  ): number {
-    // Tableau des réactions élémentaires
-    const reactions: { [key: string]: number } = {
-      'pyro-hydro': 2,
-      'pyro-cryo': 2,
-      'pyro-electro': 1.5,
-      'hydro-electro': 1.2,
-      'hydro-cryo': 1,
-      'electro-cryo': 1.5,
-      'pyro-dendro': 1.5,
-      'hydro-dendro': 1,
-      'electro-dendro': 1.5,
-      'cryo-dendro': 1
-    };
-
-    const reactionKey = [element1, element2].sort().join('-');
-    const multiplier = reactions[reactionKey] || 1;
-
-    // Formule de dégâts de réaction
-    const baseDamage = (em * 1.6 + level * 9) * multiplier / 1000;
-    
-    return Math.floor(baseDamage);
-  }
-
-  calculateTeamSynergy(team: CombatCharacter[]): number {
-    let synergyBonus = 0;
-
-    // Bonus d'élément (2+ du même élément)
-    const elementCounts: { [element: string]: number } = {};
-    team.forEach(char => {
-      const element = char.characterData.element;
-      elementCounts[element] = (elementCounts[element] || 0) + 1;
-    });
-
-    Object.values(elementCounts).forEach(count => {
-      if (count >= 2) synergyBonus += 0.15; // +15% DMG
-      if (count >= 4) synergyBonus += 0.1; // +10% DMG supplémentaire
-    });
-
-    return synergyBonus;
-  }
-
-  canAffordBoss(user: IUser): boolean {
-    return economyService.canAffordResin(user, 'boss');
-  }
-
-  deductBossCost(user: IUser): boolean {
-    const result = economyService.deductResinCost(user, 'boss');
-    return result.success;
-  }
-
-  grantBossRewards(user: IUser): { mora: number; xp: number; artifacts: number } {
-    return economyService.grantBossReward(user, user.worldLevel);
-  }
-
-  canAffordDomain(user: IUser): boolean {
-    return economyService.canAffordResin(user, 'domain');
-  }
-
-  deductDomainCost(user: IUser): boolean {
-    const result = economyService.deductResinCost(user, 'domain');
-    return result.success;
-  }
-
-  grantDomainRewards(user: IUser): { mora: number; xp: number; artifacts: number } {
-    return economyService.grantDomainReward(user, user.worldLevel);
+  private static calculateEMBonus(em: number, reactionType: string): number {
+    if (['vaporize', 'melt'].includes(reactionType)) {
+      return 2.78 * em / (em + 1400);
+    }
+    return 16 * em / (em + 2000);
   }
 }
 
-function characterDataToElement(data: CharacterData): string {
-  return data.element.toLowerCase();
-}
+// ============================================================
+// TABLE DES RÉACTIONS ÉLÉMENTAIRES
+// ============================================================
 
-export const combatEngine = new CombatEngine();
+const ELEMENTAL_REACTIONS: Record<string, Partial<Record<string, IReactionConfig>>> = {
+  Pyro: {
+    Hydro:   { name: '💧🔥 Vaporisation', type: 'vaporize', baseMultiplier: 1.5, persistStatus: null },
+    Cryo:    { name: '🔥❄️ Fusion',       type: 'melt',     baseMultiplier: 2.0, persistStatus: null },
+    Electro: { name: '🔥⚡ Surchauffe',   type: 'overload',  baseMultiplier: 2.0, persistStatus: null, specialEffect: 'knockback' },
+    Dendro:  { name: '🔥🌿 Embrasement',  type: 'burning',   baseMultiplier: 0.5, persistStatus: 'Pyro' },
+  },
+  Hydro: {
+    Pyro:    { name: '💧🔥 Vaporisation', type: 'vaporize', baseMultiplier: 2.0, persistStatus: null },
+    Cryo:    { name: '💧❄️ Congélation',  type: 'freeze',   baseMultiplier: 0,   persistStatus: 'Cryo', specialEffect: 'freeze_2turns' },
+    Electro: { name: '💧⚡ Electro-Chargé', type: 'ec',     baseMultiplier: 1.2, persistStatus: 'Hydro' },
+    Dendro:  { name: '💧🌿 Floraison',    type: 'bloom',    baseMultiplier: 2.0, persistStatus: null },
+  },
+  Cryo: {
+    Pyro:    { name: '❄️🔥 Fusion',       type: 'melt',     baseMultiplier: 1.5, persistStatus: null },
+    Hydro:   { name: '❄️💧 Congélation',  type: 'freeze',   baseMultiplier: 0,   persistStatus: 'Cryo', specialEffect: 'freeze_2turns' },
+    Electro: { name: '❄️⚡ Superconducteur', type: 'sc',    baseMultiplier: 0.5, persistStatus: null, specialEffect: 'def_shred_40' },
+  },
+  Electro: {
+    Pyro:    { name: '⚡🔥 Surchauffe',   type: 'overload',  baseMultiplier: 2.0, persistStatus: null },
+    Hydro:   { name: '⚡💧 Electro-Chargé', type: 'ec',      baseMultiplier: 1.2, persistStatus: 'Electro' },
+    Cryo:    { name: '⚡❄️ Superconducteur', type: 'sc',     baseMultiplier: 0.5, persistStatus: null, specialEffect: 'def_shred_40' },
+    Dendro:  { name: '⚡🌿 Intensification', type: 'quicken', baseMultiplier: 0,  persistStatus: 'Quicken' },
+  },
+  Geo: {
+    Pyro:    { name: '⛰️🔥 Cristallisation', type: 'crystallize', baseMultiplier: 0, persistStatus: null, specialEffect: 'shield_pyro' },
+    Hydro:   { name: '⛰️💧 Cristallisation', type: 'crystallize', baseMultiplier: 0, persistStatus: null, specialEffect: 'shield_hydro' },
+    Cryo:    { name: '⛰️❄️ Cristallisation', type: 'crystallize', baseMultiplier: 0, persistStatus: null, specialEffect: 'shield_cryo' },
+    Electro: { name: '⛰️⚡ Cristallisation', type: 'crystallize', baseMultiplier: 0, persistStatus: null, specialEffect: 'shield_electro' },
+  },
+  Anemo: {
+    Pyro:    { name: '🌪️🔥 Tourbillon Pyro',    type: 'swirl', baseMultiplier: 0.6, persistStatus: null },
+    Hydro:   { name: '🌪️💧 Tourbillon Hydro',   type: 'swirl', baseMultiplier: 0.6, persistStatus: null },
+    Cryo:    { name: '🌪️❄️ Tourbillon Cryo',    type: 'swirl', baseMultiplier: 0.6, persistStatus: null },
+    Electro: { name: '🌪️⚡ Tourbillon Électro', type: 'swirl', baseMultiplier: 0.6, persistStatus: null },
+  },
+  Dendro: {
+    Pyro:    { name: '🌿🔥 Embrasement',    type: 'burning',   baseMultiplier: 0.5, persistStatus: 'Pyro' },
+    Hydro:   { name: '🌿💧 Floraison',      type: 'bloom',     baseMultiplier: 2.0, persistStatus: null },
+    Electro: { name: '🌿⚡ Intensification', type: 'quicken',  baseMultiplier: 0,   persistStatus: 'Quicken' },
+  },
+  Physique: {},
+  Quicken: {
+    Dendro:  { name: '🌿🌿 Prolifération', type: 'spread',    baseMultiplier: 1.25, persistStatus: 'Quicken' },
+    Electro: { name: '⚡⚡ Aggravation',   type: 'aggravate', baseMultiplier: 1.15, persistStatus: 'Quicken' },
+  }
+} as any;
+
+// ============================================================
+// CONSTANTES DE TALENT
+// ============================================================
+
+const TALENT_MULTIPLIERS: Record<string, Record<number, number>> = {
+  normal: { 1: 0.8, 6: 1.2, 10: 1.8 },
+  skill:  { 1: 1.5, 6: 2.0, 10: 2.8 },
+  burst:  { 1: 3.0, 6: 4.5, 10: 6.0 }
+};

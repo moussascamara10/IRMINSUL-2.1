@@ -2,6 +2,7 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder, ButtonB
 import { User, GachaHistory, CharacterOwned, WeaponOwned } from '../../../database/models/index.js';
 import { gachaEngine, GachaResult } from '../../../services/GachaEngine.js';
 import { economyService } from '../../../services/EconomyService.js';
+import { RedisCooldown, COMMAND_COOLDOWNS } from '../../../utils/RedisCooldown.js';
 
 export default {
   data: new SlashCommandBuilder()
@@ -35,6 +36,21 @@ export default {
     const bannerType = interaction.options.getString('banniere') as 'standard' | 'character' | 'weapon';
     const pullCount = interaction.options.getInteger('nombre') || 1;
     const discordId = interaction.user.id;
+
+    // Vérifier le cooldown
+    const cooldownAction = pullCount === 1 ? 'voeux_single' : 'voeux_ten';
+    const cooldownCheck = await RedisCooldown.checkCooldown(discordId, cooldownAction, COMMAND_COOLDOWNS[cooldownAction]);
+    
+    if (cooldownCheck.onCooldown) {
+      const remainingSeconds = cooldownCheck.remainingTime || 0;
+      await interaction.editReply({
+        content: `⏱️ Attendez ${remainingSeconds}s avant de faire cette action.`
+      });
+      return;
+    }
+
+    // Définir le cooldown
+    await RedisCooldown.setCooldown(discordId, cooldownAction, COMMAND_COOLDOWNS[cooldownAction]);
 
     try {
       const user = await User.findOne({ discordId });

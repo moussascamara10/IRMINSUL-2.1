@@ -15,6 +15,7 @@ export class GachaEngine {
   private pityStandard: number = 90;
   private pityCharacter: number = 90;
   private pityWeapon: number = 80;
+  private softPityStart: number = 74;
   
   private rates = {
     standard: {
@@ -34,13 +35,44 @@ export class GachaEngine {
     }
   };
 
+  /**
+   * Calcule le taux de 5★ avec soft pity dynamique (courbe exponentielle)
+   * @param pity Pity actuel
+   * @param maxPity Pity maximum
+   * @param baseRate Taux de base de 5★
+   * @returns T ajusté avec soft pity
+   */
+  private calculateSoftPityRate(pity: number, maxPity: number, baseRate: number): number {
+    if (pity < this.softPityStart) {
+      return baseRate;
+    }
+
+    // Soft pity: courbe exponentielle de 74 à maxPity
+    // À 74: taux = baseRate
+    // À maxPity-1: taux ≈ 0.5-0.7 (très élevé)
+    // À maxPity: taux = 1.0 (garanti)
+    
+    if (pity >= maxPity) {
+      return 1.0;
+    }
+
+    const softPityProgress = (pity - this.softPityStart) / (maxPity - this.softPityStart);
+    // Courbe exponentielle: baseRate * (1 + progress^2 * 50)
+    const softPityMultiplier = 1 + Math.pow(softPityProgress, 2) * 50;
+    const adjustedRate = Math.min(baseRate * softPityMultiplier, 0.7);
+    
+    return adjustedRate;
+  }
+
   async pullStandard(user: IUser): Promise<GachaResult> {
     const pity = user.gachaPity.standard;
     const guaranteed = user.gachaGuaranteed.standard;
     
     // Ajuster les taux selon l'AR (baisse légère des taux 5★ à haut AR)
     const arModifier = this.getARModifier(user.adventureRank);
-    const adjustedFiveStarRate = this.rates.standard.fiveStar * arModifier;
+    const baseFiveStarRate = this.rates.standard.fiveStar * arModifier;
+    // Appliquer le soft pity dynamique
+    const adjustedFiveStarRate = this.calculateSoftPityRate(pity, this.pityStandard, baseFiveStarRate);
     
     const roll = Math.random();
     let rarity: number;
@@ -71,7 +103,9 @@ export class GachaEngine {
     
     // Ajuster les taux selon l'AR
     const arModifier = this.getARModifier(user.adventureRank);
-    const adjustedFiveStarRate = this.rates.character.fiveStar * arModifier;
+    const baseFiveStarRate = this.rates.character.fiveStar * arModifier;
+    // Appliquer le soft pity dynamique
+    const adjustedFiveStarRate = this.calculateSoftPityRate(pity, this.pityCharacter, baseFiveStarRate);
     
     const roll = Math.random();
     let rarity: number;
@@ -118,7 +152,9 @@ export class GachaEngine {
     
     // Ajuster les taux selon l'AR
     const arModifier = this.getARModifier(user.adventureRank);
-    const adjustedFiveStarRate = this.rates.weapon.fiveStar * arModifier;
+    const baseFiveStarRate = this.rates.weapon.fiveStar * arModifier;
+    // Appliquer le soft pity dynamique
+    const adjustedFiveStarRate = this.calculateSoftPityRate(pity, this.pityWeapon, baseFiveStarRate);
     
     const roll = Math.random();
     let rarity: number;
