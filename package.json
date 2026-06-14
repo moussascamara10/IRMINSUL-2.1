@@ -6,11 +6,11 @@
   "type": "module",
   "scripts": {
     "dev":            "tsx watch src/index.ts",
-    "build":          "node --max-old-space-size=4096 ./node_modules/.bin/tsc",
-    "start":          "npm run build && node dist/index.js",
+    "build":          "tsc",
+    "start":          "tsx src/index.ts",
     "clean":          "rm -rf dist/",
     "rebuild":        "npm run clean && npm run build",
-    "deploy-commands":"node dist/scripts/deploy-commands.js",
+    "deploy-commands":"tsx scripts/deploy-commands.ts",
     "typecheck":      "tsc --noEmit"
   },
   "engines": {
