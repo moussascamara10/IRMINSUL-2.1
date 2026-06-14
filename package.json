@@ -7,7 +7,7 @@
   "scripts": {
     "dev":            "tsx watch src/index.ts",
     "build":          "tsc",
-    "start":          "node dist/index.js",
+    "start":          "npm run build && node dist/index.js",
     "clean":          "rm -rf dist/",
     "rebuild":        "npm run clean && npm run build",
     "deploy-commands":"node dist/scripts/deploy-commands.js",
