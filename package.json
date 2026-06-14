@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev":            "tsx watch src/index.ts",
-    "build":          "tsc",
+    "build":          "node --max-old-space-size=4096 ./node_modules/.bin/tsc",
     "start":          "npm run build && node dist/index.js",
     "clean":          "rm -rf dist/",
     "rebuild":        "npm run clean && npm run build",
