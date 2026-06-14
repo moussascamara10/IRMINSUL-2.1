@@ -1,6 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm install && npm run build"
+buildCommand = "npm install && npm run build && ls -la dist/"
 
 [deploy]
 startCommand = "node dist/index.js"
